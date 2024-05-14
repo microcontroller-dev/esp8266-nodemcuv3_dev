@@ -17,10 +17,12 @@ File root;
 File myWebfile;
 File file;
 
+String content;
 
 const char* ssid = "blackzap";
 const char* password = "0123456789";
-
+uint8_t max_connections=8;//Maximum Connection Limit for AP
+int current_stations=0, new_stations=0;
 IPAddress localIP;
 //IPAddress localIP(192, 168, 1, 200); // hardcoded
 IPAddress localGateway;
@@ -212,9 +214,9 @@ void setup() {
   display.display(); 
 
 
-  // testdrawbitmap();
-  // delay(2000); 
-  // testanimate(logo_bmp, 16, 16);
+  testdrawbitmap();
+  delay(2000); 
+  testanimate(logo_bmp, 16, 16);
 
 
 
@@ -236,12 +238,19 @@ void setup() {
   
  
 
-  WiFi.softAP(ssid,password);
-  
+  if(WiFi.softAP(ssid,password,1,false,max_connections)==true)
+  {
     Serial.print("Access Point is Created with SSID: ");
     Serial.println(ssid);
+    Serial.print("Max Connections Allowed: ");
+    Serial.println(max_connections);
     Serial.print("Access Point IP: ");
     Serial.println(WiFi.softAPIP());
+  }
+  else
+  {
+    Serial.println("Unable to Create Access Point");
+  }
   Serial.println(WiFi.localIP());
 
 
@@ -250,18 +259,22 @@ void setup() {
 
 
   myWebfile = SD.open("index.htm", FILE_READ);
-
   server.on("/", HTTP_GET, [](AsyncWebServerRequest *request){
     request->send(200, "text/html", myWebfile.readString());
-    
   });
 
 
-  file = LittleFS.open("/result.htm", "r");
+
+ File file = LittleFS.open("/result.htm", "r");
+  if(!file){
+    Serial.println("Failed to open file for reading");
+    return;
+  }
+  content = file.read();
+
   server.on("/result", HTTP_GET, [](AsyncWebServerRequest *request){
-    request->send(LittleFS, "text/html", file.readString());
+    request->send(200, "text/html", content);
   });
-
 
 
 
