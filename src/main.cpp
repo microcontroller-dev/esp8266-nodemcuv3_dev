@@ -11,17 +11,17 @@
 
 
 
-const int chipSelect = D8; // use D0 for Wemos D1 Mini
+const int chipSelect = D8; 
 File root;
 File myWebfile;
+
+
 
 
 const char* ssid = "blackzap";
 const char* password = "0123456789";
 uint8_t max_connections=8;//Maximum Connection Limit for AP
 int current_stations=0, new_stations=0;
-
-
 IPAddress localIP;
 //IPAddress localIP(192, 168, 1, 200); // hardcoded
 IPAddress localGateway;
@@ -29,6 +29,8 @@ IPAddress localGateway;
 IPAddress subnet(255, 255, 0, 0);
 unsigned long previousMillis = 0;
 const long interval = 10000; 
+
+
 
 
 #define SCREEN_WIDTH 128
@@ -73,7 +75,6 @@ int colcnt =0;
 while(true) {
   File entry =  dir.openNextFile();
   if (! entry) {
-    // no more files
     break;
    }
    if (numTabs > 0) {
@@ -87,7 +88,6 @@ while(true) {
      printDirectory(entry, numTabs+1);
    } else
    {
-     // files have sizes, directories do not
      Serial.print("\t");
      Serial.println(entry.size(), DEC);
    }
@@ -97,7 +97,6 @@ while(true) {
 
 
 void testscrolltext(void) {
-
   display.clearDisplay();
   display.setTextSize(2); 
   display.setTextColor(WHITE);
@@ -105,7 +104,6 @@ void testscrolltext(void) {
   display.println(F("scroll"));
   display.display();      
   delay(100);
-
   display.startscrollright(0x00, 0x0F);
   delay(2000);
   display.stopscroll();
@@ -125,7 +123,6 @@ void testscrolltext(void) {
 
 
 void testdrawbitmap(void) {
-
   display.clearDisplay();
   display.drawBitmap(
     (display.width()  - LOGO_WIDTH ) / 2,
@@ -202,10 +199,12 @@ void setup() {
 
 
   testdrawbitmap();
+  delay(2000); 
+  testanimate(logo_bmp, 16, 16);
 
 
   Serial.print("\r\nWaiting for SD card to initialise...");
-  if (!SD.begin(chipSelect)) { // CS is D8 in this example
+  if (!SD.begin(chipSelect)) {
     Serial.println("Initialising failed!");
     return;
   }
@@ -226,13 +225,20 @@ void setup() {
   {
     Serial.println("Unable to Create Access Point");
   }
-  // Print ESP Local IP Address
   Serial.println(WiFi.localIP());
+
+
+
+
 
 
   myWebfile = SD.open("index.htm", FILE_READ);
   server.on("/", HTTP_GET, [](AsyncWebServerRequest *request){
     request->send(200, "text/html", myWebfile.readString());
+  });
+
+  server.on("/result", HTTP_GET, [](AsyncWebServerRequest *request){
+    request->send(200, "text/html", "result.htm");
   });
 
 
@@ -272,15 +278,20 @@ server.begin();
 
 void loop() {
 
+  digitalWrite(LED_BUILTIN, LOW);
+  delay(400);
+  digitalWrite(LED_BUILTIN, HIGH);
+  delay(500);
+  digitalWrite(LED_BUILTIN, LOW);
+
   root = SD.open("/");
   root.rewindDirectory();
-  printDirectory(root, 0); //Display the card contents
+  printDirectory(root, 0); 
   root.close();
   Serial.flush(); Serial.begin(9600); while(!Serial.available());
-  //-------------------------------------------------------------------------------
-  // SD.open(filename,OPEN_READ|OPEN_WRITE) SD.open(filename) defaults to OPEN_READ
+
   Serial.println("Open a new file called 'testfile.txt' and write 1 to 5 to it");
-  File testfile = SD.open("testdata.txt", FILE_WRITE); // FILE_WRITE opens file for writing and moves to the end of the file, returns 0 if not available
+  File testfile = SD.open("testdata.txt", FILE_WRITE); 
   if (testfile) {
     for (int entry = 0; entry <= 5; entry = entry + 1) {
       testfile.print(entry);
@@ -290,19 +301,17 @@ void loop() {
   Serial.println("\r\nCompleted writing data 1 to 5\r\n");
   testfile.close();
   Serial.flush(); Serial.begin(9600); while(!Serial.available());
-  //-------------------------------------------------------------------------------
   Serial.println("Open a file called 'testfile.txt' and read the data from it");
-  testfile = SD.open("testdata.txt", FILE_READ); // FILE_WRITE opens file for writing and moves to the end of the file
+  testfile = SD.open("testdata.txt", FILE_READ);
   while (testfile.available()) {
     Serial.write(testfile.read());
   }
   Serial.println("\r\nCompleted reading data from file\r\n");
-  // close the file:
   testfile.close();
   Serial.flush(); Serial.begin(9600); while(!Serial.available());
   //-------------------------------------------------------------------------------
   Serial.println("Open a file called 'testfile.txt' and append 5 downto 1 to it");
-  testfile = SD.open("testdata.txt", FILE_WRITE); // FILE_WRITE opens file for writing and moves to the end of the file
+  testfile = SD.open("testdata.txt", FILE_WRITE);
   for (int entry = 5; entry >= 0; entry = entry - 1) {
     testfile.print(entry);
     Serial.print(entry);
@@ -312,40 +321,31 @@ void loop() {
   Serial.flush(); Serial.begin(9600); while(!Serial.available());
   //-------------------------------------------------------------------------------
   Serial.println("Open a file called 'testfile.txt' and read it");
-  testfile = SD.open("testdata.txt", FILE_READ); // FILE_WRITE opens file for writing and moves to the end of the file
+  testfile = SD.open("testdata.txt", FILE_READ); 
   while (testfile.available()) {
     Serial.write(testfile.read());
   }
   Serial.println("\r\nCompleted reading from the file\r\n");
-  // close the file:
   testfile.close();
   Serial.flush(); Serial.begin(9600); while(!Serial.available());
-  //012345543210
-  //-------------------------------------------------------------------------------
   Serial.println("\r\nOpen a file called 'testfile.txt' and move to position 8 in the file then print the data (should be 3)");
-  testfile = SD.open("testdata.txt", FILE_READ); // FILE_WRITE opens file for writing and moves to the end of the file
+  testfile = SD.open("testdata.txt", FILE_READ); 
   Serial.print("Data at file location (8): ");
   testfile.seek(8);
   Serial.write(testfile.read());
-  //-------------------------------------------------------------------------------
   Serial.flush(); Serial.begin(9600); while(!Serial.available());
   Serial.println("\r\nOpen a file called 'testfile.txt' and move to position 6 in the file then print the data (should be 5)");
   Serial.print("Data at file location (6): ");
   testfile.seek(6);
   Serial.write(testfile.read());
-  //-------------------------------------------------------------------------------
   Serial.print("\r\nFile pointer is at file location: ");
   Serial.println(testfile.position());
   Serial.print("\r\nData at current file location (should be 4): ");
   Serial.println(char(testfile.peek()));
-  //-------------------------------------------------------------------------------
-  // close the file:
   testfile.close();
-  //-------------------------------------------------------------------------------
   Serial.flush(); Serial.begin(9600); while(!Serial.available());
-  //-------------------------------------------------------------------------------
   Serial.println("\r\nOpen a file called 'testfile.txt' and write some data records");
-  testfile = SD.open("testdata.txt", FILE_WRITE); // FILE_WRITE opens file for writing and moves to the end of the file
+  testfile = SD.open("testdata.txt", FILE_WRITE); 
   int hours = 10;
   int mins  = 00;
   String names = "Mr Another";
@@ -369,8 +369,6 @@ void loop() {
   Serial.println("\r\nCompleted writing data records to the file\r\n");
   testfile.close();
   Serial.flush(); Serial.begin(9600); while(!Serial.available());
-
-  // Now read file contents
   Serial.println("\r\nOpen a file called 'testfile.txt' and move to position 8 in the file then print the data (should be 4)");
   testfile = SD.open("testdata.txt", FILE_READ); // FILE_WRITE opens file for writing and moves to the end of the file
   while (testfile.available()) {
