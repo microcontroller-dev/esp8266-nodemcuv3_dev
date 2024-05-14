@@ -3,6 +3,7 @@
 #include <Adafruit_SSD1306.h>
 #include <SPI.h>
 #include <SD.h>
+#include "LittleFS.h"
 #include <ESP8266WiFi.h>
 #include <ESPAsyncTCP.h>
 #include <ESPAsyncWebServer.h>
@@ -14,9 +15,9 @@
 const int chipSelect = D8; 
 File root;
 File myWebfile;
+File file;
 
-
-
+String content;
 
 const char* ssid = "blackzap";
 const char* password = "0123456789";
@@ -168,6 +169,21 @@ void testanimate(const uint8_t *bitmap, uint8_t w, uint8_t h) {
 }
 
 
+void FSzeigen() {
+  FSInfo fs_info;
+  LittleFS.info(fs_info);
+  float fileTotalKB = fs_info.totalBytes / 1024.0;
+  float fileUsedKB = fs_info.usedBytes / 1024.0;
+  Serial.print("\nFilesystem Total KB "); Serial.print(fileTotalKB);
+  Serial.print(" benutzt KB "); Serial.println(fileUsedKB);
+
+  Dir dir = LittleFS.openDir("/");  // Dir ausgeben
+  while (dir.next()) {
+    Serial.print(dir.fileName()); Serial.print("\t");
+    File f = dir.openFile("r");
+    Serial.println(f.size());
+  }
+}
 
 
 void setup() {
@@ -203,6 +219,8 @@ void setup() {
   testanimate(logo_bmp, 16, 16);
 
 
+
+
   Serial.print("\r\nWaiting for SD card to initialise...");
   if (!SD.begin(chipSelect)) {
     Serial.println("Initialising failed!");
@@ -211,6 +229,14 @@ void setup() {
   Serial.println("Initialisation completed");
 
 
+
+  if(!LittleFS.begin()){
+    Serial.println("An Error has occurred while mounting LittleFS");
+    return;
+  }
+  
+  
+ 
 
   if(WiFi.softAP(ssid,password,1,false,max_connections)==true)
   {
@@ -237,9 +263,19 @@ void setup() {
     request->send(200, "text/html", myWebfile.readString());
   });
 
+
+
+ File file = LittleFS.open("/result.htm", "r");
+  if(!file){
+    Serial.println("Failed to open file for reading");
+    return;
+  }
+  content = file.read();
+
   server.on("/result", HTTP_GET, [](AsyncWebServerRequest *request){
-    request->send(200, "text/html", "result.htm");
+    request->send(200, "text/html", content);
   });
+
 
 
 server.on("/scan", HTTP_GET, [](AsyncWebServerRequest *request){
